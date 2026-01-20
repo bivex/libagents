@@ -1,0 +1,44 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Include the exported targets
+include("${CMAKE_CURRENT_LIST_DIR}/libagentscppTargets.cmake")
+
+# Check for required components
+set(_supported_components Copilot Claude)
+
+foreach(_comp ${libagentscpp_FIND_COMPONENTS})
+    if(NOT _comp IN_LIST _supported_components)
+        set(libagentscpp_FOUND FALSE)
+        set(libagentscpp_NOT_FOUND_MESSAGE "Unsupported component: ${_comp}")
+        return()
+    endif()
+
+    # Check if component is available based on compile definitions
+    if(_comp STREQUAL "Copilot")
+        get_target_property(_defs libagents::libagentscpp INTERFACE_COMPILE_DEFINITIONS)
+        if(NOT "LIBAGENTS_HAS_COPILOT" IN_LIST _defs)
+            if(libagentscpp_FIND_REQUIRED_${_comp})
+                set(libagentscpp_FOUND FALSE)
+                set(libagentscpp_NOT_FOUND_MESSAGE "Required component Copilot not available")
+                return()
+            endif()
+        else()
+            set(libagentscpp_Copilot_FOUND TRUE)
+        endif()
+    elseif(_comp STREQUAL "Claude")
+        get_target_property(_defs libagents::libagentscpp INTERFACE_COMPILE_DEFINITIONS)
+        if(NOT "LIBAGENTS_HAS_CLAUDE" IN_LIST _defs)
+            if(libagentscpp_FIND_REQUIRED_${_comp})
+                set(libagentscpp_FOUND FALSE)
+                set(libagentscpp_NOT_FOUND_MESSAGE "Required component Claude not available")
+                return()
+            endif()
+        else()
+            set(libagentscpp_Claude_FOUND TRUE)
+        endif()
+    endif()
+endforeach()
+
+check_required_components(libagentscpp)
