@@ -113,6 +113,8 @@ Want to add your project? Open a PR!
 
 Elias Bachaalany ([@0xeb](https://github.com/0xeb))
 
+Pair-programmed with Claude Code and Codex.
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
