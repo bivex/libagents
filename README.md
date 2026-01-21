@@ -100,6 +100,15 @@ auto tool = libagents::make_tool(
 ./multi_tool [claude|copilot]    # Multiple tools
 ```
 
+## Projects Using This Library
+
+| Project | Description |
+|---------|-------------|
+| [windbg_copilot](https://github.com/0xeb/windbg_copilot) | WinDbg extension for AI-assisted debugging |
+| [lldb_copilot](https://github.com/0xeb/lldb_copilot) | LLDB plugin for AI-assisted debugging |
+
+Want to add your project? Open a PR!
+
 ## Author
 
 Elias Bachaalany ([@0xeb](https://github.com/0xeb))
