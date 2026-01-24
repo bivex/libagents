@@ -24,7 +24,7 @@ namespace libagents
 struct CopilotProviderConfig
 {
     std::string log_level = "info";
-    bool use_stdio = true;
+    bool use_stdio = false;  // Use TCP transport (more reliable on Windows)
     std::vector<std::string> cli_args = {"--allow-all-tools", "--allow-all-paths"};
 };
 
