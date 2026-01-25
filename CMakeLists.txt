@@ -110,6 +110,9 @@ endif()
 add_library(libagents ${LIBAGENTS_SOURCES} ${LIBAGENTS_HEADERS})
 add_library(libagents::libagents ALIAS libagents)
 
+# Link nlohmann_json (required by config.hpp)
+target_link_libraries(libagents PUBLIC nlohmann_json::nlohmann_json)
+
 target_include_directories(libagents
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
