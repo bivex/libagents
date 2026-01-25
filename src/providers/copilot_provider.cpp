@@ -2,6 +2,7 @@
 #include <libagents/internal/response_waiter.hpp>
 #include <libagents/providers/copilot_provider.hpp>
 
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -34,8 +35,9 @@ bool CopilotProvider::initialize(const ProviderConfig& config)
         initialized_ = true;
         return true;
     }
-    catch (const std::exception&)
+    catch (const std::exception& e)
     {
+        std::cerr << "[CopilotProvider] Failed to initialize: " << e.what() << std::endl;
         return false;
     }
 }
