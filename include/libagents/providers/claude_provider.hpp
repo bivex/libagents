@@ -104,6 +104,7 @@ class ClaudeProvider : public IProvider
     std::vector<Tool> registered_tools_; // Need full Tool info to create MCP tools on connect
     BYOKConfig byok_;                    // BYOK configuration for custom API keys
     std::chrono::milliseconds response_timeout_{std::chrono::seconds(60)};
+    std::string last_error_;             // Last error message for diagnostics
 };
 
 } // namespace libagents
