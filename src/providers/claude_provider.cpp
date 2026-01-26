@@ -13,6 +13,30 @@
 namespace libagents
 {
 
+namespace
+{
+/// Convert AssistantMessageError enum to human-readable string
+std::string assistant_error_to_string(claude::AssistantMessageError error)
+{
+    switch (error)
+    {
+    case claude::AssistantMessageError::AuthenticationFailed:
+        return "Authentication failed - check your API key or login status";
+    case claude::AssistantMessageError::BillingError:
+        return "Billing error - check your account status";
+    case claude::AssistantMessageError::RateLimit:
+        return "Rate limit exceeded - please wait and try again";
+    case claude::AssistantMessageError::InvalidRequest:
+        return "Invalid request";
+    case claude::AssistantMessageError::ServerError:
+        return "Server error - Claude API is experiencing issues";
+    case claude::AssistantMessageError::Unknown:
+    default:
+        return "Unknown error";
+    }
+}
+} // namespace
+
 ClaudeProvider::ClaudeProvider()
 {
     options_ = std::make_unique<claude::ClaudeOptions>();
@@ -259,14 +283,17 @@ bool ClaudeProvider::ensure_connection()
         client_ = std::make_unique<claude::ClaudeClient>(*options_);
         client_->connect();
         connected_ = true;
+        last_error_.clear();
         return true;
     }
     catch (const std::exception& e)
     {
+        last_error_ = e.what();
         return false;
     }
     catch (...)
     {
+        last_error_ = "Unknown connection error";
         return false;
     }
 }
@@ -281,6 +308,10 @@ std::string ClaudeProvider::send_query(const std::string& query, EventCallback c
 {
     if (!ensure_connection())
     {
+        if (!last_error_.empty())
+        {
+            return "Error: Failed to connect to Claude: " + last_error_;
+        }
         return "Error: Failed to connect to Claude";
     }
 
@@ -335,6 +366,13 @@ std::string ClaudeProvider::send_query(const std::string& query, EventCallback c
         if (claude::is_assistant_message(message))
         {
             const auto& assistant = std::get<claude::AssistantMessage>(message);
+
+            // Check for assistant-level errors (auth, billing, rate limit, etc.)
+            if (assistant.error.has_value())
+            {
+                return "Error: " + assistant_error_to_string(assistant.error.value());
+            }
+
             for (const auto& block : assistant.content)
             {
                 if (std::holds_alternative<claude::TextBlock>(block))
@@ -373,8 +411,26 @@ std::string ClaudeProvider::send_query(const std::string& query, EventCallback c
         }
         else if (claude::is_result_message(message))
         {
-            // Extract session_id from result for conversation continuity
             const auto& result = std::get<claude::ResultMessage>(message);
+
+            // Check for result-level errors
+            if (result.is_error())
+            {
+                // Try to extract error details from raw_json if available
+                std::string error_detail;
+                if (result.raw_json.contains("result") &&
+                    result.raw_json["result"].is_string())
+                {
+                    error_detail = result.raw_json["result"].get<std::string>();
+                }
+                if (error_detail.empty())
+                {
+                    error_detail = "Query failed (subtype: error)";
+                }
+                return "Error: " + error_detail;
+            }
+
+            // Extract session_id from result for conversation continuity
             if (!result.session_id().empty())
             {
                 session_id_ = result.session_id();
