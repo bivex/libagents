@@ -87,6 +87,9 @@ class ClaudeProvider : public IProvider
     /// Get the current session ID for persistence
     std::string get_session_id() const { return session_id_; }
 
+    /// Get last error message (if initialization or query failed)
+    std::string get_last_error() const { return last_error_; }
+
   private:
     /// Ensure client is connected
     bool ensure_connection();

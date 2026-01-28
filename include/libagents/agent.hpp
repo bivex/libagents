@@ -163,6 +163,9 @@ class IAgent
 
     /// Check if busy processing a query
     virtual bool is_busy() const = 0;
+
+    /// Get last error message (if initialization or query failed)
+    virtual std::string get_last_error() const = 0;
 };
 
 /// Create an agent with the specified provider

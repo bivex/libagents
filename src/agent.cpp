@@ -450,6 +450,23 @@ class AgentImpl : public IAgent
 
     bool is_busy() const override { return busy_; }
 
+    std::string get_last_error() const override
+    {
+#ifdef LIBAGENTS_HAS_COPILOT
+        if (provider_type_ == ProviderType::Copilot && copilot_provider_)
+        {
+            return copilot_provider_->get_last_error();
+        }
+#endif
+#ifdef LIBAGENTS_HAS_CLAUDE
+        if (provider_type_ == ProviderType::Claude && claude_provider_)
+        {
+            return claude_provider_->get_last_error();
+        }
+#endif
+        return "";
+    }
+
   private:
     std::vector<Tool> build_hosted_tools()
     {

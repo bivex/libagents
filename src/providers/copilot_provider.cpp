@@ -23,23 +23,13 @@ bool CopilotProvider::initialize(const ProviderConfig& config)
     if (initialized_)
         return true;
 
-    try
-    {
-        copilot::ClientOptions opts;
-        opts.log_level = copilot_config_.log_level;
-        opts.use_stdio = copilot_config_.use_stdio;
-        opts.cli_args = copilot_config_.cli_args;
+    last_error_.clear(); // Clear any previous error
 
-        client_ = std::make_unique<copilot::Client>(opts);
-        client_->start().get();
-        initialized_ = true;
-        return true;
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << "[CopilotProvider] Failed to initialize: " << e.what() << std::endl;
-        return false;
-    }
+    // Don't start the client here - defer until first query (lazy initialization)
+    // This matches Claude's behavior and avoids initialization failures in restricted
+    // environments like WinDbg's DLL load context
+    initialized_ = true;
+    return true;
 }
 
 void CopilotProvider::shutdown()
@@ -157,8 +147,29 @@ bool CopilotProvider::ensure_session()
     if (session_)
         return true;
 
-    if (!client_ || !initialized_)
+    if (!initialized_)
         return false;
+
+    // Start client if not already started (lazy initialization)
+    if (!client_)
+    {
+        try
+        {
+            copilot::ClientOptions opts;
+            opts.log_level = copilot_config_.log_level;
+            opts.use_stdio = copilot_config_.use_stdio;
+            opts.cli_args = copilot_config_.cli_args;
+
+            client_ = std::make_unique<copilot::Client>(opts);
+            client_->start().get();
+        }
+        catch (const std::exception& e)
+        {
+            last_error_ = e.what();
+            std::cerr << "[CopilotProvider] Failed to start client: " << e.what() << std::endl;
+            return false;
+        }
+    }
 
     // Convert registered tools to SDK tools
     std::vector<copilot::Tool> sdk_tools;
@@ -214,6 +225,9 @@ bool CopilotProvider::ensure_session()
         {
             copilot::ResumeSessionConfig resume_config;
             resume_config.tools = sdk_tools;
+            // Enable auto BYOK from environment variables
+            // This allows COPILOT_SDK_BYOK_* env vars to be used
+            resume_config.auto_byok_from_env = true;
             session_ = client_->resume_session(session_id_, resume_config).get();
             session_id_ = session_->session_id();
             return true;
@@ -232,8 +246,11 @@ bool CopilotProvider::ensure_session()
         config.tools = sdk_tools;
         config.system_message = copilot::SystemMessageConfig{
             .mode = copilot::SystemMessageMode::Replace, .content = system_prompt_};
+        // Enable auto BYOK from environment variables
+        // This allows COPILOT_SDK_BYOK_* env vars to be used when no explicit BYOK is configured
+        config.auto_byok_from_env = true;
 
-        // Apply BYOK configuration if set
+        // Apply BYOK configuration if set (takes priority over env vars)
         if (byok_.is_configured())
         {
             copilot::ProviderConfig provider;
@@ -278,7 +295,12 @@ std::string CopilotProvider::send_query(const std::string& query, EventCallback 
 {
     if (!ensure_session())
     {
-        return "Error: Failed to create session";
+        std::string error_msg = "Error: Failed to create session";
+        if (!last_error_.empty())
+        {
+            error_msg += " - " + last_error_;
+        }
+        return error_msg;
     }
 
     // Event handling for collecting response

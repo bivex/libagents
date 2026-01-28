@@ -85,6 +85,9 @@ class CopilotProvider : public IProvider
     /// Get the current session ID for persistence
     std::string get_session_id() const;
 
+    /// Get last error message (if initialization or query failed)
+    std::string get_last_error() const { return last_error_; }
+
   private:
     /// Ensure session is created
     bool ensure_session();
@@ -100,6 +103,7 @@ class CopilotProvider : public IProvider
     std::string session_id_; // Stored for persistence across process restarts
     BYOKConfig byok_;        // BYOK configuration for custom API keys
     std::chrono::milliseconds response_timeout_{std::chrono::seconds(60)};
+    std::string last_error_; // Last error message from initialization or query
 };
 
 } // namespace libagents
