@@ -156,7 +156,17 @@ bool CopilotProvider::ensure_session()
         try
         {
             copilot::ClientOptions opts;
-            opts.log_level = copilot_config_.log_level;
+            // Convert string log_level to enum
+            static const std::unordered_map<std::string, copilot::LogLevel> log_level_map = {
+                {"none", copilot::LogLevel::None},
+                {"error", copilot::LogLevel::Error},
+                {"warning", copilot::LogLevel::Warning},
+                {"info", copilot::LogLevel::Info},
+                {"debug", copilot::LogLevel::Debug},
+                {"all", copilot::LogLevel::All},
+            };
+            auto it_ll = log_level_map.find(copilot_config_.log_level);
+            opts.log_level = (it_ll != log_level_map.end()) ? it_ll->second : copilot::LogLevel::Info;
             opts.use_stdio = copilot_config_.use_stdio;
             opts.cli_args = copilot_config_.cli_args;
 
@@ -209,7 +219,7 @@ bool CopilotProvider::ensure_session()
             }
             else
             {
-                result.result_type = "error";
+                result.result_type = copilot::ToolResultType::Failure;
                 result.error = "Tool handler not found";
             }
             return result;
