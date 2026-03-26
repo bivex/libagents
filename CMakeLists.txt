@@ -34,13 +34,38 @@ set(BUILD_TESTING OFF CACHE BOOL "" FORCE)  # General CMake testing flag
 # nlohmann_json - fetch once for all SDKs to use
 find_package(nlohmann_json CONFIG QUIET)
 if(NOT TARGET nlohmann_json::nlohmann_json)
-    include(FetchContent)
-    FetchContent_Declare(
-        nlohmann_json
-        GIT_REPOSITORY https://github.com/nlohmann/json.git
-        GIT_TAG v3.11.3
+    set(LIBAGENTS_NLOHMANN_JSON_SOURCE_DIR "${CMAKE_BINARY_DIR}/_deps/nlohmann_json-manual-src")
+
+    if(EXISTS "${LIBAGENTS_NLOHMANN_JSON_SOURCE_DIR}" AND NOT EXISTS "${LIBAGENTS_NLOHMANN_JSON_SOURCE_DIR}/include/nlohmann/json.hpp")
+        file(REMOVE_RECURSE "${LIBAGENTS_NLOHMANN_JSON_SOURCE_DIR}")
+    endif()
+
+    if(NOT EXISTS "${LIBAGENTS_NLOHMANN_JSON_SOURCE_DIR}/include/nlohmann/json.hpp")
+        find_package(Git QUIET)
+        if(NOT Git_FOUND)
+            message(FATAL_ERROR "nlohmann_json not found and Git is unavailable to fetch it")
+        endif()
+
+        file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/_deps")
+        execute_process(
+            COMMAND "${GIT_EXECUTABLE}" clone --depth 1 --branch v3.11.3 https://github.com/nlohmann/json.git "${LIBAGENTS_NLOHMANN_JSON_SOURCE_DIR}"
+            RESULT_VARIABLE LIBAGENTS_NLOHMANN_JSON_CLONE_RESULT
+            OUTPUT_VARIABLE LIBAGENTS_NLOHMANN_JSON_CLONE_STDOUT
+            ERROR_VARIABLE LIBAGENTS_NLOHMANN_JSON_CLONE_STDERR
+        )
+        if(NOT LIBAGENTS_NLOHMANN_JSON_CLONE_RESULT EQUAL 0)
+            message(FATAL_ERROR
+                "Failed to fetch nlohmann_json via git clone.\n"
+                "stdout:\n${LIBAGENTS_NLOHMANN_JSON_CLONE_STDOUT}\n"
+                "stderr:\n${LIBAGENTS_NLOHMANN_JSON_CLONE_STDERR}"
+            )
+        endif()
+    endif()
+
+    add_library(nlohmann_json::nlohmann_json INTERFACE IMPORTED)
+    set_target_properties(nlohmann_json::nlohmann_json PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${LIBAGENTS_NLOHMANN_JSON_SOURCE_DIR}/include"
     )
-    FetchContent_MakeAvailable(nlohmann_json)
 endif()
 
 # FastMCPP (required by claude-agent-sdk-cpp)
